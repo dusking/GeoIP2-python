@@ -1,0 +1,16 @@
+
+
+functions:
+    geoip:
+        runtime: python2.7
+        handler: handler.geoip
+        description: "Get Geo Location for IP"
+        memory: 128
+        timeout: 30
+
+    slackcommand:
+        runtime: python2.7
+        handler: handler.slackcommand
+        description: "Geo By IP for Slack"
+        memory: 128
+        timeout: 30
