@@ -1,16 +1,48 @@
 
-
+logo: https://www.cardfellow.com/blog/wp-content/uploads/2017/06/MAXMIND-MinFraud-Review.png
+description: >
+    This API expose MaxMind.com freemium edition of IP Geolocation lookup.\n
+    This API doesn not maintained by MaxMind.\n
+    IP geolocation is inherently imprecise. Locations are often near the center of the population. 
+    Any location provided by a GeoIP2 database or web service should not be used to identify a particular address or household.
 functions:
     geoip:
         runtime: python2.7
-        handler: handler.geoip
-        description: "Get Geo Location for IP"
+        handler: handler.geoip_wrapper
+        description: Get formatted geo location for a given IP address
         memory: 128
         timeout: 30
+        properties:            
+            ip_addr:
+                description: The ip address to look for
+                type: string  
+                required: true              
+                format: ip-address
+        samples:
+            -   args: 
+                    ip_addr: 77.126.162.111
+                name: Some ip
 
-    slackcommand:
+    geoipraw:
         runtime: python2.7
-        handler: handler.slackcommand
-        description: "Geo By IP for Slack"
+        handler: handler.geoipraw_wrapper
+        description: Get raw geo location data for a given IP address
         memory: 128
         timeout: 30
+        properties:            
+            ip_addr:
+                description: The ip address to look for
+                type: string  
+                required: true              
+                format: ip-address
+        samples:
+            -   args: 
+                    ip_addr: 77.126.162.111
+                name: Some ip
+
+    # slackcommand:
+    #     runtime: python2.7
+    #     handler: handler.slackcommand
+    #     description: "Geo By IP for Slack"
+    #     memory: 128
+    #     timeout: 30
