@@ -1,10 +1,11 @@
 import os
 import json
 import urlparse
+import requests
 import ipaddress
+import threading
 
 import geoip2.database
-# import geoip2.webservice
 
 import base64
 import hashlib
@@ -55,20 +56,35 @@ def geoip(args):
 
 
 def validate_input(token, ip_addr):
+    user_data = ''
     if not token:
         return "missing user token"
     try:
         user_data = decrypt(token.replace('Basic ', ''))
         print ("user_data: {0}".format(user_data))
     except ValueError:
-        return '`{}` does not appear to be a valid token'.format(token)
+        return {'error': '`{}` does not appear to be a valid token'.format(token)}
     if not ip_addr:
-        return 'missing ip_addr'
+        return {'error': 'missing ip_addr'}
     try:
         ipaddress.ip_address(ip_addr)
     except ValueError:
-        return '`{}` does not appear to be a valid ip address'.format(ip_addr)
-    return None
+        return {'error': '`{}` does not appear to be a valid ip address'.format(ip_addr)}
+    return {'user_data': user_data}
+
+
+def callPost(body):    
+    print ('going to send request.. body: {}'.format(body))
+    headers = {"Content-Type":"application/json", "Token":"Basic 62646018047677d2f204ffae7dac388bc4cb227d963b729d"}    
+    send_message_url = 'https://us-central1-faaspotit.cloudfunctions.net/google-bigquery'
+    requests.post(send_message_url, data=json.dumps(body), headers=headers)
+
+
+def update_usage(user_id, user_ip_addr, function_id, function_name):
+    body = {"user_id": user_id, 'source_ip': user_ip_addr, 'function_id': function_id, 'function_name': function_name}
+    th = threading.Thread(target=callPost, args=[body])
+    th.daemon = True
+    th.start()
 
 
 def geoip_wrapper(event, context):
@@ -80,19 +96,24 @@ def geoip_wrapper(event, context):
     except ValueError:
         body = urlparse.parse_qs(body)  
         body = {k: v[0] for k, v in body.iteritems()}
-    headers = event.get("headers", {})    
-    user_ip = headers.get('X-Forwarded-For')
+    headers = event.get("headers", {})        
     token = headers.get('Token')    
-    print ("user_ip: {0}".format(user_ip))
-    
+    user_ip = headers.get('X-Forwarded-For')
     ip_addr = body.get('ip_addr', "").strip("\"")  
-    err = validate_input(token, ip_addr)
+
+    result = validate_input(token, ip_addr)
+    err = result.get('error')
     if err:
         return {
             'statusCode': 400,
             'body': json.dumps({'error': err}),
             'headers': {"Content-Type": "application/json"}
         }
+    user_data = result.get('user_data')
+    user_id = user_data.split(':')[0]
+    function_name = event.get('uri').split('/')[-1]
+    function_id = context.get('functionId')
+    update_usage(user_id, user_ip, function_id, function_name)
     
     response = json.dumps(geoip({'ip_addr': ip_addr, 'raw': False}))    
     return {
@@ -111,19 +132,24 @@ def geoipraw_wrapper(event, context):
     except ValueError:
         body = urlparse.parse_qs(body)  
         body = {k: v[0] for k, v in body.iteritems()}
-    headers = event.get("headers", {})    
-    user_ip = headers.get('X-Forwarded-For')
+    headers = event.get("headers", {})        
     token = headers.get('Token')    
-    print ("user_ip: {0}".format(user_ip))
-
+    user_ip = headers.get('X-Forwarded-For')
     ip_addr = body.get('ip_addr', "").strip("\"")  
-    err = validate_input(token, ip_addr)
+
+    result = validate_input(token, ip_addr)
+    err = result.get('error')
     if err:
         return {
             'statusCode': 400,
             'body': json.dumps({'error': err}),
             'headers': {"Content-Type": "application/json"}
         }
+    user_data = result.get('user_data')
+    user_id = user_data.split(':')[0]
+    function_name = event.get('uri').split('/')[-1]
+    function_id = context.get('functionId')
+    update_usage(user_id, user_ip, function_id, function_name)
 
     response = json.dumps(geoip({'ip_addr': ip_addr, 'raw': True}))    
     return {
@@ -132,27 +158,6 @@ def geoipraw_wrapper(event, context):
         'headers': {"Content-Type": "application/json"}
     }
 
-
-# def geoip_service(event, context):
-#     """get geo-info for given ip"""
-#     query_params = event.get("query", {})
-#     request_ip = query_params.get('ip')
-#     print ("context: {0}".format(context))
-#     user_id = context.get_doc('user_id')
-#     license_key = context.get_doc('key')
-#     if not user_id or not license_key:
-#         print ("missing data.. user_id: {}, license_key: {}".format(user_id, license_key))
-#     print ("going to extract ip info for: {0}".format(request_ip))
-#     client = geoip2.webservice.Client(user_id, license_key)
-#     response = client.insights(request_ip)
-#     response = 'Geo: {0} {1}, TZ: {2}, Organization: {3} ({4})'\
-#         .format(response.country.name, response.city.name, response.location.time_zone,
-#                 response.traits.organization, response.traits.user_type)
-#     return {
-#         'statusCode': 200,
-#         'body': response,
-#         'headers': {"Content-Type": "application/json"}
-#     }
 
 
 def slackcommand(event, context):

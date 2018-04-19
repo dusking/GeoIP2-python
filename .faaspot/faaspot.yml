@@ -2,7 +2,7 @@
 logo: https://www.cardfellow.com/blog/wp-content/uploads/2017/06/MAXMIND-MinFraud-Review.png
 description: >
     This API expose MaxMind.com freemium edition of IP Geolocation lookup.\n
-    This API doesn not maintained by MaxMind.\n
+    This API does not maintained by MaxMind.\n
     IP geolocation is inherently imprecise. Locations are often near the center of the population. 
     Any location provided by a GeoIP2 database or web service should not be used to identify a particular address or household.
 functions:
@@ -21,7 +21,10 @@ functions:
         samples:
             -   args: 
                     ip_addr: 77.126.162.111
-                name: Some ip
+                name: Some IP
+            -   args:
+                    ip_addr: 2601:182:cf01:ad0:79b4:81bf:2cd7:bc08
+                name: Some other IP
 
     geoipraw:
         runtime: python2.7
@@ -39,6 +42,9 @@ functions:
             -   args: 
                     ip_addr: 77.126.162.111
                 name: Some ip
+            -   args:
+                    ip_addr: 2601:182:cf01:ad0:79b4:81bf:2cd7:bc08
+                name: Some other IP
 
     # slackcommand:
     #     runtime: python2.7
